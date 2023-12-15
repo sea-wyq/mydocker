@@ -79,6 +79,19 @@ var initCommand = cli.Command{
 	},
 }
 
+var commitCommand = cli.Command{
+	Name:  "commit",
+	Usage: "commit a container into image",
+	Action: func(context *cli.Context) error {
+		if len(context.Args()) < 1 {
+			return fmt.Errorf("missing container name")
+		}
+		imageName := context.Args().Get(0)
+		container.CommitContainer(imageName)
+		return nil
+	},
+}
+
 func main() {
 	app := cli.NewApp()
 	app.Name = "mydocker"
@@ -87,6 +100,7 @@ func main() {
 	app.Commands = []cli.Command{
 		initCommand,
 		runCommand,
+		commitCommand,
 	}
 
 	app.Before = func(context *cli.Context) error {
