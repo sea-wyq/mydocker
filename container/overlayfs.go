@@ -73,7 +73,7 @@ func mountOverlayFS(rootURL string, mntURL string) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		log.Errorf("mountOverlayFS mount err:%v", err)
+		log.Errorf("umountOverlayFS umount %s err:%v", mntURL, err)
 	}
 }
 
