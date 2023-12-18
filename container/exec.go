@@ -34,7 +34,7 @@ func ExecContainer(containerName string, comArray []string) {
 
 	// 把命令拼接成字符串，便于传递
 	cmdStr := strings.Join(comArray, " ")
-	log.Infof("container pid：%s command：%s", pid, cmdStr)
+	log.Infof("container pid:%s command:%s", pid, cmdStr)
 	_ = os.Setenv(EnvExecPid, pid)
 	_ = os.Setenv(EnvExecCmd, cmdStr)
 

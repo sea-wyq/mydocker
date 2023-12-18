@@ -150,6 +150,20 @@ var logCommand = cli.Command{
 	},
 }
 
+var stopCommand = cli.Command{
+	Name:  "stop",
+	Usage: "stop a container",
+	Action: func(context *cli.Context) error {
+		// 期望输入是：mydocker stop 容器名，如果没有指定参数直接打印错误
+		if len(context.Args()) < 1 {
+			return fmt.Errorf("missing container name")
+		}
+		containerName := context.Args().Get(0)
+		container.StopContainer(containerName)
+		return nil
+	},
+}
+
 func main() {
 	app := cli.NewApp()
 	app.Name = "mydocker"
@@ -162,6 +176,7 @@ func main() {
 		listCommand,
 		logCommand,
 		execCommand,
+		stopCommand,
 	}
 
 	app.Before = func(context *cli.Context) error {
