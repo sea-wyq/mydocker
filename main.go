@@ -44,6 +44,11 @@ var runCommand = cli.Command{
 			Name:  "d",
 			Usage: "detach container",
 		},
+		// 提供run后面的-name指定容器名字参数
+		cli.StringFlag{
+			Name:  "name",
+			Usage: "container name",
+		},
 	},
 	/*
 		这里是run命令执行的真正函数。
@@ -65,7 +70,7 @@ var runCommand = cli.Command{
 		detach := context.Bool("d")
 
 		if tty && detach {
-			return fmt.Errorf("it and d paramter can not both provided")
+			return fmt.Errorf("it and d parameter can not both provided")
 		}
 		log.Infof("createTty %v", tty)
 		resConf := &subsystems.ResourceConfig{
@@ -74,7 +79,17 @@ var runCommand = cli.Command{
 			CpuCfsQuota: context.Int("cpu"),
 		}
 		volume := context.String("v")
-		Run(tty, cmdArray, resConf, volume)
+		containerName := context.String("name")
+		Run(tty, cmdArray, resConf, volume, containerName)
+		return nil
+	},
+}
+
+var listCommand = cli.Command{
+	Name:  "ps",
+	Usage: "list all the containers",
+	Action: func(context *cli.Context) error {
+		container.ListContainers()
 		return nil
 	},
 }
@@ -111,6 +126,7 @@ func main() {
 		initCommand,
 		runCommand,
 		commitCommand,
+		listCommand,
 	}
 
 	app.Before = func(context *cli.Context) error {
@@ -125,7 +141,7 @@ func main() {
 	}
 }
 
-func Run(tty bool, comArray []string, res *subsystems.ResourceConfig, volume string) {
+func Run(tty bool, comArray []string, res *subsystems.ResourceConfig, volume, containerName string) {
 	parent, writePipe := container.NewParentProcess(tty, volume)
 	if parent == nil {
 		log.Errorf("New parent process error")
@@ -133,6 +149,12 @@ func Run(tty bool, comArray []string, res *subsystems.ResourceConfig, volume str
 	}
 	if err := parent.Start(); err != nil {
 		log.Errorf("Run parent.Start err:%v", err)
+	}
+	// record container info
+	containerName, err := container.RecordContainerInfo(parent.Process.Pid, comArray, containerName)
+	if err != nil {
+		log.Errorf("Record container info error %v", err)
+		return
 	}
 	// 创建cgroup manager, 并通过调用set和apply设置资源限制并使限制在容器上生效
 	cgroupManager := cgroups.NewCgroupManager("mydocker-cgroup")
@@ -143,6 +165,7 @@ func Run(tty bool, comArray []string, res *subsystems.ResourceConfig, volume str
 	sendInitCommand(comArray, writePipe)
 	if tty { // 如果是tty，那么父进程等待
 		_ = parent.Wait()
+		container.DeleteContainerInfo(containerName)
 	}
 	// overlays
 	// container.DeleteWorkSpace(container.RootURL, container.MntURL, volume)
