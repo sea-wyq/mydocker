@@ -38,7 +38,7 @@ func umountVolume(mntURL string, volumeURLs []string) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		log.Errorf("Umount volume failed. %v", err)
+		log.Errorf("umount volume failed. %v", err)
 	}
 }
 

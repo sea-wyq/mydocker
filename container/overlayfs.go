@@ -103,7 +103,7 @@ func umountOverlayFS(mntURL string) {
 		log.Errorf("%v", err)
 	}
 	if err := os.RemoveAll(mntURL); err != nil {
-		log.Errorf("Remove dir %s error %v", mntURL, err)
+		log.Errorf("remove dir %s error %v", mntURL, err)
 	}
 }
 

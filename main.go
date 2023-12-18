@@ -117,6 +117,19 @@ var commitCommand = cli.Command{
 	},
 }
 
+var logCommand = cli.Command{
+	Name:  "logs",
+	Usage: "print logs of a container",
+	Action: func(context *cli.Context) error {
+		if len(context.Args()) < 1 {
+			return fmt.Errorf("please input your container name")
+		}
+		containerName := context.Args().Get(0)
+		container.LogContainer(containerName)
+		return nil
+	},
+}
+
 func main() {
 	app := cli.NewApp()
 	app.Name = "mydocker"
@@ -127,6 +140,7 @@ func main() {
 		runCommand,
 		commitCommand,
 		listCommand,
+		logCommand,
 	}
 
 	app.Before = func(context *cli.Context) error {
@@ -142,7 +156,11 @@ func main() {
 }
 
 func Run(tty bool, comArray []string, res *subsystems.ResourceConfig, volume, containerName string) {
-	parent, writePipe := container.NewParentProcess(tty, volume)
+	containerID := container.RandStringBytes(container.IDLength)
+	if containerName == "" {
+		containerName = containerID
+	}
+	parent, writePipe := container.NewParentProcess(tty, volume, containerName)
 	if parent == nil {
 		log.Errorf("New parent process error")
 		return
@@ -151,7 +169,7 @@ func Run(tty bool, comArray []string, res *subsystems.ResourceConfig, volume, co
 		log.Errorf("Run parent.Start err:%v", err)
 	}
 	// record container info
-	containerName, err := container.RecordContainerInfo(parent.Process.Pid, comArray, containerName)
+	err := container.RecordContainerInfo(parent.Process.Pid, comArray, containerName, containerID)
 	if err != nil {
 		log.Errorf("Record container info error %v", err)
 		return

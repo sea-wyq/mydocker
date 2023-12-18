@@ -1,6 +1,8 @@
 package container
 
 import (
+	"fmt"
+	"mydocker/cgroups/subsystems"
 	"os"
 	"os/exec"
 	"syscall"
@@ -21,12 +23,12 @@ const (
 	MntURL  string = "/mnt/d/GoPro/src/mydocker/merged" // 旧值  "/mnt/d/GoPro/src/mydocker/busybox/"
 )
 
-func NewParentProcess(tty bool, volume string) (*exec.Cmd, *os.File) {
+func NewParentProcess(tty bool, volume, containerName string) (*exec.Cmd, *os.File) {
 	// 创建匿名管道用于传递参数，将readPipe作为子进程的ExtraFiles，子进程从readPipe中读取参数
 	// 父进程中则通过writePipe将参数写入管道
 	readPipe, writePipe, err := os.Pipe()
 	if err != nil {
-		log.Errorf("New pipe error %v", err)
+		log.Errorf("new pipe error %v", err)
 		return nil, nil
 	}
 	cmd := exec.Command("/proc/self/exe", "init")
@@ -37,6 +39,20 @@ func NewParentProcess(tty bool, volume string) (*exec.Cmd, *os.File) {
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
+	} else {
+		// 对于后台运行容器，将标准输出重定向到日志文件中，便于后续查询
+		dirURL := fmt.Sprintf(InfoLocFormat, containerName)
+		if err := os.MkdirAll(dirURL, subsystems.Perm0622); err != nil {
+			log.Errorf("newParentProcess mkdir %s error %v", dirURL, err)
+			return nil, nil
+		}
+		stdLogFilePath := dirURL + LogFile
+		stdLogFile, err := os.Create(stdLogFilePath)
+		if err != nil {
+			log.Errorf("newParentProcess create file %s error %v", stdLogFilePath, err)
+			return nil, nil
+		}
+		cmd.Stdout = stdLogFile
 	}
 	cmd.ExtraFiles = []*os.File{readPipe}
 	// rootfs

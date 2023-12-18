@@ -55,7 +55,7 @@ func ListContainers() {
 	w := tabwriter.NewWriter(os.Stdout, 12, 1, 3, ' ', 0)
 	_, err = fmt.Fprint(w, "ID\tNAME\tPID\tSTATUS\tCOMMAND\tCREATED\n")
 	if err != nil {
-		log.Errorf("Fprint error %v", err)
+		log.Errorf("fprint error %v", err)
 	}
 	for _, item := range containers {
 		_, err = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
@@ -66,11 +66,11 @@ func ListContainers() {
 			item.Command,
 			item.CreatedTime)
 		if err != nil {
-			log.Errorf("Fprint error %v", err)
+			log.Errorf("fprint error %v", err)
 		}
 	}
 	if err = w.Flush(); err != nil {
-		log.Errorf("Flush error %v", err)
+		log.Errorf("flush error %v", err)
 	}
 }
 
@@ -94,7 +94,7 @@ func GetContainerInfo(file fs.DirEntry) (*Info, error) {
 	return info, nil
 }
 
-func RecordContainerInfo(containerPID int, commandArray []string, containerName string) (string, error) {
+func RecordContainerInfo(containerPID int, commandArray []string, containerName, containerID string) error {
 	// 随机出10位containerID
 	id := RandStringBytes(IDLength)
 	// 以当前时间作为容器创建时间
@@ -105,7 +105,7 @@ func RecordContainerInfo(containerPID int, commandArray []string, containerName 
 	}
 	command := strings.Join(commandArray, "")
 	containerInfo := &Info{
-		Id:          id,
+		Id:          containerID,
 		Pid:         strconv.Itoa(containerPID),
 		Command:     command,
 		CreatedTime: createTime,
@@ -115,36 +115,36 @@ func RecordContainerInfo(containerPID int, commandArray []string, containerName 
 
 	jsonBytes, err := json.Marshal(containerInfo)
 	if err != nil {
-		log.Errorf("Record container info error %v", err)
-		return "", err
+		log.Errorf("record container info error %v", err)
+		return err
 	}
 	jsonStr := string(jsonBytes)
 	// 拼接出存储容器信息文件的路径，如果目录不存在则级联创建
 	dirUrl := fmt.Sprintf(InfoLocFormat, containerName)
-	if err := os.MkdirAll(dirUrl, subsystems.Perm0622); err != nil {
-		log.Errorf("Mkdir error %s error %v", dirUrl, err)
-		return "", err
+	if err = os.MkdirAll(dirUrl, subsystems.Perm0622); err != nil {
+		log.Errorf("mkdir error %s error %v", dirUrl, err)
+		return err
 	}
 	// 将容器信息写入文件
 	fileName := dirUrl + "/" + ConfigName
 	file, err := os.Create(fileName)
-	defer file.Close()
 	if err != nil {
-		log.Errorf("Create file %s error %v", fileName, err)
-		return "", err
+		log.Errorf("create file %s error %v", fileName, err)
+		return err
 	}
+	defer file.Close()
 	if _, err := file.WriteString(jsonStr); err != nil {
-		log.Errorf("File write string error %v", err)
-		return "", err
+		log.Errorf("file write string error %v", err)
+		return err
 	}
 
-	return containerName, nil
+	return nil
 }
 
 func DeleteContainerInfo(containerName string) {
 	dirURL := fmt.Sprintf(InfoLocFormat, containerName)
 	if err := os.RemoveAll(dirURL); err != nil {
-		log.Errorf("Remove dir %s error %v", dirURL, err)
+		log.Errorf("remove dir %s error %v", dirURL, err)
 	}
 }
 
