@@ -116,6 +116,18 @@ var commitCommand = cli.Command{
 		return nil
 	},
 }
+var removeCommand = cli.Command{
+	Name:  "rm",
+	Usage: "remove unused containers",
+	Action: func(context *cli.Context) error {
+		if len(context.Args()) < 1 {
+			return fmt.Errorf("missing container name")
+		}
+		containerName := context.Args().Get(0)
+		container.RemoveContainer(containerName)
+		return nil
+	},
+}
 var execCommand = cli.Command{
 	Name:  "exec",
 	Usage: "exec a command into container",
@@ -177,6 +189,7 @@ func main() {
 		logCommand,
 		execCommand,
 		stopCommand,
+		removeCommand,
 	}
 
 	app.Before = func(context *cli.Context) error {
