@@ -116,6 +116,26 @@ var commitCommand = cli.Command{
 		return nil
 	},
 }
+var execCommand = cli.Command{
+	Name:  "exec",
+	Usage: "exec a command into container",
+	Action: func(context *cli.Context) error {
+		// 如果环境变量存在，说明C代码已经运行过了，即setns系统调用已经执行了，这里就直接返回，避免重复执行
+		if os.Getenv(container.EnvExecPid) != "" {
+			log.Infof("pid callback pid %v", os.Getgid())
+			return nil
+		}
+		// 格式：mydocker exec 容器名字 命令，因此至少会有两个参数
+		if len(context.Args()) < 2 {
+			return fmt.Errorf("missing container name or command")
+		}
+		containerName := context.Args().Get(0)
+		// 将除了容器名之外的参数作为命令部分
+		commandArray := context.Args().Tail()
+		container.ExecContainer(containerName, commandArray)
+		return nil
+	},
+}
 
 var logCommand = cli.Command{
 	Name:  "logs",
@@ -141,6 +161,7 @@ func main() {
 		commitCommand,
 		listCommand,
 		logCommand,
+		execCommand,
 	}
 
 	app.Before = func(context *cli.Context) error {
@@ -184,9 +205,9 @@ func Run(tty bool, comArray []string, res *subsystems.ResourceConfig, volume, co
 	if tty { // 如果是tty，那么父进程等待
 		_ = parent.Wait()
 		container.DeleteContainerInfo(containerName)
+		// overlays
+		container.DeleteWorkSpace(container.RootURL, container.MntURL, volume)
 	}
-	// overlays
-	// container.DeleteWorkSpace(container.RootURL, container.MntURL, volume)
 }
 
 // sendInitCommand 通过writePipe将指令发送给子进程
